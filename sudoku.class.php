@@ -103,45 +103,16 @@ class sudoku extends grid {
     }
 
     public function isValid ($gridNum, $cellNum) {
-        $grid = $this;
-        switch ($gridNum) {
-         case 1:
-            $gRow = $grid->getRow(1);
-            $gCol = $grid->getCol(1);
-            break;
-         case 2:
-            $gRow = $grid->getRow(1);
-            $gCol = $grid->getCol(2);
-            break;
-         case 3:
-            $gRow = $grid->getRow(1);
-            $gCol = $grid->getCol(3);
-            break;
-         case 4:
-            $gRow = $grid->getRow(2);
-            $gCol = $grid->getCol(1);
-            break;
-         case 5:
-            $gRow = $grid->getRow(2);
-            $gCol = $grid->getCol(2);
-            break;
-         case 6:
-            $gRow = $grid->getRow(2);
-            $gCol = $grid->getCol(3);
-            break;
-         case 7:
-            $gRow = $grid->getRow(3);
-            $gCol = $grid->getCol(1);
-            break;
-         case 8:
-            $gRow = $grid->getRow(3);
-            $gCol = $grid->getCol(2);
-            break;
-         case 9:
-            $gRow = $grid->getRow(3);
-            $gCol = $grid->getCol(3);
-            break;
+        //Get the grid row we are about
+        $rNum = (int) ceil($gridNum/3);
+        $gRow = $this->getRow($rNum);
+        
+        //Get the grid columns we care about
+        $cNum = (int) ($gridNum%3);
+        if ($cNum == 0) {
+            $cNum = 3;
         }
+        $gCol = $this->getCol($cNum);
         //Row Checking...
         $tmp = [];
         foreach ($gRow as $row) {

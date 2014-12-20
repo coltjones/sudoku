@@ -146,23 +146,8 @@ class sudoku extends grid {
         $tmp = [];
         foreach ($gRow as $row) {
             //Which cells are we checking?
-            switch ($cellNum) {
-             case 1:
-             case 2:
-             case 3:
-                $cRow = $row->getRow(1);
-                break;
-             case 4:
-             case 5:
-             case 6:
-                $cRow = $row->getRow(2);
-                break;
-             case 7:
-             case 8:
-             case 9:
-                $cRow = $row->getRow(3);
-                break;
-            }
+            $num = (int) ceil($cellNum/3);
+            $cRow = $row->getRow($num);
             $tmp = array_merge($tmp,$cRow);
         }
         $rValid = $this->checkDupes($tmp);
@@ -170,23 +155,11 @@ class sudoku extends grid {
         $tmp = [];
         foreach ($gCol as $col) {
             //Which cells are we checking?
-            switch ($cellNum) {
-             case 1:
-             case 4:
-             case 7:
-                $cCol = $col->getCol(1);
-                break;
-             case 2:
-             case 5:
-             case 8:
-                $cCol = $col->getCol(2);
-                break;
-             case 3:
-             case 6:
-             case 9:
-                $cCol = $col->getCol(3);
-                break;
+            $num = (int) ($cellNum%3);
+            if ($num == 0) {
+                $num = 3;
             }
+            $cCol = $col->getCol($num);
             $tmp = array_merge($tmp,$cCol);
         }
         $cValid = $this->checkDupes($tmp);

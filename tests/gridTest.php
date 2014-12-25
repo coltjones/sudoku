@@ -35,6 +35,16 @@ class gridTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(TRUE, $foundGap);
     }
 
+    public function testIsLockedCell () {
+        $g = new grid();
+        
+        $g->setCell(1, 5, TRUE);
+        $test = $g->isLockedCell(1);
+        $this->assertEquals(TRUE, $test);
+        $test = $g->isLockedCell(2);
+        $this->assertEquals(FALSE, $test);
+    }
+
     public function testSetCell () {
         $g = new grid();
         

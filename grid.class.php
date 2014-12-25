@@ -1,10 +1,13 @@
 <?php
 
 class grid {
+    public $lockedCells = NULL;
 
     public function __construct () {
         //Initialize our data array for this grid
         $this->data = array_fill(1,9,NULL);
+        //Initialize lockedCells to and empty array
+        $this->lockedCells = [];
         //Overload remaining here
         $this->remaining = array_combine(range(1,9),range(1,9));
         uasort($this->remaining, function ($a, $b) {
@@ -12,7 +15,14 @@ class grid {
         });
     }
 
-    public function setCell ($cellNum, $value) {
+    public function isLockedCell ($cellNum) {
+        if (isset($this->lockedCells[$cellNum])) {
+            return TRUE;
+        }
+        return FALSE;
+    }
+
+    public function setCell ($cellNum, $value, $lock = FALSE) {
         if (!in_array($cellNum,range(1,9))) {
             return FALSE;
         }
@@ -23,6 +33,11 @@ class grid {
         $this->data[$cellNum] = $value;
         //We were used so eliminate this value from remaining
         unset($this->remaining[$value]);
+        
+        //Handle locks
+        if ($lock) {
+            $this->lockedCells[$cellNum] = $cellNum;
+        }
         return TRUE;
     }
 

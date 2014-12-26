@@ -3,6 +3,8 @@
 class sudoku extends grid {
 
     public function __construct () {
+        //Initialize our seed state
+        $this->seeded = FALSE;
         //Create an array of 9 elements starting at 1 all NULL values
         $grids = array_fill(1,9,NULL);
         //For each NULL create a new grid object.
@@ -13,7 +15,8 @@ class sudoku extends grid {
         $this->data = array_combine(range(1,9),$grids);
         
         //Populate the positions we need to place values for
-        $this->placementArr = range(1,81);
+        $tmp = range(1,81);
+        $this->placementArr = array_combine($tmp,$tmp);
 
         //Ensure we are NOT solved
         $this->solved = FALSE;
@@ -33,7 +36,61 @@ class sudoku extends grid {
     }
 
     public function generate () {
+        if ($this->seeded) {
+            $possibles = $this->findPossibles();
+            //Sort our position array so the easiest items are first
+            uasort($possibles, function ($a, $b) {
+                $nA = count($a);
+                $nB = count($b);
+                if ($nA == $nB) {
+                    return 0;
+                }
+                return ($nA < $nB)? -1 : 1;
+            });
+            $tmp = array_keys($possibles);
+            $this->placementArr = array_combine($tmp,$tmp);
+        }
         return $this->solve($this, $this->placementArr);
+    }
+
+    public function findPossibles ($location = NULL) {
+        $possible = [];
+        if ($location === NULL) {
+            //Do them all
+            $range = array_keys($this->placementArr);
+        } else {
+            $range = [$location];
+        }
+        //Look through each column
+        foreach ($range as $loc) {
+            list($gridNum, $cellNum) = $this->lookupCoords($loc);
+            //Get the grid
+            $sGrid = $this->getGrid($gridNum);
+            $gRow = $this->gridNumToRow($gridNum);
+            $gCol = $this->gridNumToCol($gridNum);
+            
+            //Gather the info we can
+            $rem = $sGrid->getRemaining();
+            sort($rem);
+            $rem = array_combine($rem,$rem);
+            $row = array_filter($this->getAggRow($gRow, $cellNum));
+            $row = array_combine($row,$row);
+            asort($row);
+            $col = array_filter($this->getAggCol($gCol, $cellNum));
+            $col = array_combine($col,$col);
+            asort($col);
+            //Finally diff it
+            $possible = array_diff_assoc($rem, $row, $col);
+            if ($location === NULL) {
+                $ret[$loc] = $possible;
+            } else {
+                //Only care about this cell right now.
+                return $possible;
+            }
+        }
+        if ($location === NULL) {
+            return $ret;
+        }
     }
 
     public function solve ($gArr, $pArr) {
@@ -45,11 +102,32 @@ class sudoku extends grid {
             if (count($p) > 0) {
                 $loc = array_shift($p);
                 list($gridNum, $cellNum) = $this->lookupCoords($loc);
-            
-                //Get the value to place
-                $sGrid = $g->getGrid($gridNum);
-                $testVals = $sGrid->getRemaining();
+//echo "LOC $loc".PHP_EOL; 
 
+                //Get the subGrid
+                $sGrid = $g->getGrid($gridNum);
+
+                //If the cell is locked just recurse, nothing to do at this position
+                if ($sGrid->isLockedCell($cellNum)) {
+//echo "Cell is locked. Moving on...".PHP_EOL;
+                    if ($this->solve($g,$p)) {
+                        return TRUE;
+                    } else {
+                        return FALSE;
+                    }
+                }
+            
+                if ($this->seeded) {
+                    //Eliminate as many options as we can...
+                    $testVals = $this->findPossibles($loc);
+                } else {
+                    $testVals = $sGrid->getRemaining();
+                }
+
+                if (!(count($testVals) > 0)) {
+                    return FALSE;
+                }
+//echo "\ttestVals = ".implode(", ",$testVals).PHP_EOL;
                 do {
                     $val = array_shift($testVals);
                     //Set the value
@@ -57,6 +135,7 @@ class sudoku extends grid {
                     //Test for validity @ the supergrid
                     $valid = $g->isValid($gridNum, $cellNum);
                     if ($valid) {
+//echo $this->getPrintableGrid();
                         //Try this tree
                         if ($this->solve($g,$p)) {
                             return TRUE;
@@ -103,36 +182,16 @@ class sudoku extends grid {
     }
 
     public function isValid ($gridNum, $cellNum) {
-        //Get the grid row we are about
-        $rNum = (int) ceil($gridNum/3);
-        $gRow = $this->getRow($rNum);
         
-        //Get the grid columns we care about
-        $cNum = (int) ($gridNum%3);
-        if ($cNum == 0) {
-            $cNum = 3;
-        }
-        $gCol = $this->getCol($cNum);
-        //Row Checking...
-        $tmp = [];
-        foreach ($gRow as $row) {
-            //Which cells are we checking?
-            $num = (int) ceil($cellNum/3);
-            $cRow = $row->getRow($num);
-            $tmp = array_merge($tmp,$cRow);
-        }
+        //Get the grid row and column we need
+        $gRow = $this->gridNumToRow($gridNum);
+        $gCol = $this->gridNumToCol($gridNum);
+        
+        //Get the row and column you need
+        $tmp = $this->getAggRow($gRow, $cellNum);
         $rValid = $this->checkDupes($tmp);
-        //Col Checking...
-        $tmp = [];
-        foreach ($gCol as $col) {
-            //Which cells are we checking?
-            $num = (int) ($cellNum%3);
-            if ($num == 0) {
-                $num = 3;
-            }
-            $cCol = $col->getCol($num);
-            $tmp = array_merge($tmp,$cCol);
-        }
+
+        $tmp = $this->getAggCol($gCol, $cellNum);
         $cValid = $this->checkDupes($tmp);
 
         return ($rValid&&$cValid)?TRUE:FALSE;
@@ -152,6 +211,35 @@ class sudoku extends grid {
         return TRUE;
     }
 
+    public function initCell ($loc, $value) {
+        $this->seeded = TRUE;
+        list($gridNum, $cellNum) = $this->lookupCoords($loc);
+        $sGrid = $this->getGrid($gridNum);
+        $sGrid->setCell($cellNum, $value, TRUE);
+        //Clear this from the work list
+        unset($this->placementArr[$loc]);
+        return TRUE;
+    }
+
+    public function getAggRow ($gRow, $cellNum) {
+        $tmp = [];
+        foreach ($gRow as $row) {
+            $cRow = $row->gridNumToRow($cellNum);
+            $tmp = array_merge($tmp,$cRow);
+        }
+
+        return $tmp;
+    }
+
+    public function getAggCol ($gCol, $cellNum) {
+        $tmp = [];
+        foreach ($gCol as $col) {
+            $cCol = $col->gridNumToCol($cellNum);
+            $tmp = array_merge($tmp,$cCol);
+        }
+        return $tmp;
+    }
+    
     public function lookupCoords ($num) {
         //Find which grid we need
         $g = (int) (floor($num/9)+1);

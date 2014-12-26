@@ -109,6 +109,21 @@ class grid {
         return TRUE;
     }
 
+    public function gridNumToRow ($n) {
+        //Get the grid row we care about
+        $rNum = (int) ceil($n/3);
+        return $this->getRow($rNum);
+    }
+
+    public function gridNumToCol ($n) {
+        //Get the grid col we care about
+        $cNum = (int) ($n%3);
+        if ($cNum == 0) {
+            $cNum = 3;
+        }
+        return $this->getCol($cNum);
+    }
+
     protected function getCellArr ($getArr) {
         return array(1 => $this->data[$getArr[0]], 2 => $this->data[$getArr[1]], 3 => $this->data[$getArr[2]]);
     }
